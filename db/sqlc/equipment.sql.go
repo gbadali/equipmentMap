@@ -53,6 +53,16 @@ func (q *Queries) CreateEquipment(ctx context.Context, arg CreateEquipmentParams
 	return i, err
 }
 
+const deleteEquipment = `-- name: DeleteEquipment :exec
+DELETE FROM equipment 
+WHERE id = $1
+`
+
+func (q *Queries) DeleteEquipment(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteEquipment, id)
+	return err
+}
+
 const getEquipment = `-- name: GetEquipment :one
 SELECT id, model_number, description, created_at, location, parent, powered_from, controlled_from FROM equipment WHERE id = $1 LIMIT 1
 `
@@ -115,4 +125,40 @@ func (q *Queries) ListEquipment(ctx context.Context, arg ListEquipmentParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateEquipment = `-- name: UpdateEquipment :exec
+UPDATE equipment 
+SET
+    model_number = $1,
+    description = $2,
+    location = $3,
+    parent = $4,
+    powered_from = $5,
+    controlled_from = $6
+WHERE id = $7
+RETURNING id, model_number, description, created_at, location, parent, powered_from, controlled_from
+`
+
+type UpdateEquipmentParams struct {
+	ModelNumber    string        `json:"model_number"`
+	Description    string        `json:"description"`
+	Location       int64         `json:"location"`
+	Parent         sql.NullInt64 `json:"parent"`
+	PoweredFrom    sql.NullInt64 `json:"powered_from"`
+	ControlledFrom sql.NullInt64 `json:"controlled_from"`
+	ID             int64         `json:"id"`
+}
+
+func (q *Queries) UpdateEquipment(ctx context.Context, arg UpdateEquipmentParams) error {
+	_, err := q.db.ExecContext(ctx, updateEquipment,
+		arg.ModelNumber,
+		arg.Description,
+		arg.Location,
+		arg.Parent,
+		arg.PoweredFrom,
+		arg.ControlledFrom,
+		arg.ID,
+	)
+	return err
 }
